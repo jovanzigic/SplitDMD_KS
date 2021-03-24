@@ -1,2 +1,2 @@
 # SplitDMD_KS
-Split DMD algorithm tested on the Kuramoto-Sivashinksy Equation.
+Split DMD algorithm tested on the Kuramoto-Sivashinsky Equation.
