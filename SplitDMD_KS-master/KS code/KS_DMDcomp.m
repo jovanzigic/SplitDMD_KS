@@ -1,51 +1,68 @@
+% Chaotic Case Metric for Pattern Reconstruction
+% || OD modes ||_2 / || DMD modes ||_2 for each split
+
 clear, close all
 
 interval = 400; % adjust parameter
-re = 13.2; % adjust parameter
+re = 402.3; % adjust parameter
 r_dim = 13; % adjust parameter
 
 split = 1;
 
 if split == 1
-    fileload = strcat('ROM_KS_data_t',int2str(interval),'_L',int2str(100*re),'_r',int2str(r_dim),'_split3');
+    fileload1 = strcat('ROM_KS_data_t',int2str(interval),'_L',int2str(100*re),'_r',int2str(r_dim),'_split4_error140770');
 else
-    fileload = strcat('ROM_KS_data_t',int2str(interval),'_L',int2str(100*re),'_r',int2str(r_dim));
+    n_split = 1;
+    fileload1 = strcat('ROM_KS_data_t',int2str(interval),'_L',int2str(100*re),'_r',int2str(r_dim));
 end
-load(fileload)
+load(fileload1)
 
-if split == 1
-    % Get the DMD modes for each phase
-    [Phi_1,omega_1,lambda_1,b_1,time_dynamics_1] = run_std_DMD(z_p1,r_dim,dt);
-    [Phi_2,omega_2,lambda_2,b_2,time_dynamics_2] = run_std_DMD(z_p2,r_dim,dt);
-    [Phi_3,omega_3,lambda_3,b_3,time_dynamics_3] = run_std_DMD(z_p3,r_dim,dt);
-    [Phi_4,omega_4,lambda_4,b_4,time_dynamics_4] = run_std_DMD(z_p4,r_dim,dt);
-%     [Phi_3,omega_3,lambda_3,b_3,time_dynamics_3] = run_std_DMD(z_p3,r_dim,dt);
-    eps = 1e-7;
+% Obtain modes for each split
+Phi = cell(1,n_split);
+cd_2norm = zeros(1,n_split);
+w1 = w;
+for k = 1:n_split
+    [Phi{1,k},~,~,~,~] = run_std_DMD(z(:,p(k):p(k+1)),r_dim,dt);
+    Phimat = cell2mat(Phi(1,k));
+    wmat = cell2mat(w1(1,k));
+    ct = 0;
+    % DMD Modes
+    eps = 1e-15;
+    Phi1 = Phimat;
     for i = 1:(r_dim-1)
-        if abs(imag(Phi_2(1,i))) < eps
-            w2 = [w2(:,1:(i-1)) w2(:,(i+1):end)];
-            Phi_2 = [Phi_2(:,1:(i-1)) Phi_2(:,(i+1):end)];
+        if abs(imag(Phimat(1,i))) < eps
+%             wmat = [wmat(:,1:(i-1)) wmat(:,(i+1):end)];
+            Phi1 = [Phi1(:,1:(i-1-ct)) Phi1(:,(i+1-ct):end)];
+            ct = ct + 1;
         end
     end
-    if abs(imag(Phi_2(1,end))) < eps
-        w2 = w2(:,1:(end-1));
-        Phi_2 = Phi_2(:,1:(end-1));
+    Phimat = Phi1;
+    if abs(imag(Phimat(1,end))) < eps
+%         wmat = wmat(:,1:(end-1));
+        Phimat = Phimat(:,1:(end-1));
     end
-    cd_2norm = norm(w2)/norm(Phi_2);
-else
-    [Phi,omega,lambda,b,time_dynamics] = run_std_DMD(z,r_dim,dt);
+    ct = 0;
+    % OD Modes
+    eps = 1e-15;
+    w2 = wmat;
     for i = 1:(r_dim-1)
-        if abs(imag(Phi(1,i))) < eps
-%             w = [w(:,1:(i-1)) w(:,(i+1):end)];
-            Phi = [Phi(:,1:(i-1)) Phi(:,(i+1):end)];
+        if abs(imag(wmat(1,i))) < eps
+            w2 = [w2(:,1:(i-1-ct)) w2(:,(i+1-ct):end)];
+            ct = ct + 1;
         end
     end
-    if abs(imag(w(1,end))) < eps
-        w = w(:,1:(end-1));
-        Phi = Phi(:,1:(end-1));
+    wmat = w2;
+    if (abs(imag(wmat(1,end))) < eps) || (size(Phimat,2)+1 == size(wmat,2))
+        wmat = wmat(:,1:(end-1));
     end
-    cd_2norm = norm(w)/norm(Phi);
+    Phi{1,k} = Phimat;
+    w1{1,k} = wmat;
+    if size(Phimat,2) == size(wmat,2)
+        cd_2norm(k) = norm(wmat)/norm(Phimat);
+    else
+        cd_2norm(k) = 1;
+    end
 end
 
 % Save data
-save(fileload)
+save(fileload1)

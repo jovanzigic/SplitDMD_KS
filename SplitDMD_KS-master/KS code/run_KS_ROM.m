@@ -1,16 +1,17 @@
 clear, close all
 
-% current change : rank loop, dmd split, name = split2
-split = 1; % adjust parameter
 
-% choose rank loop
-% N = 6;
-% space = 2;
-N = 13; space = 13;
+%% Turn Splitting On or Off
+split = 1; % adjust parameter (1 on, 0 off)
+sens = 1;
+
+%% Choose Rank of Approximation
+
+% % N = space implies only one test
+% N = 6; % adjust parameter
+% space = 2; % adjust parameter
+N = 13; space = 13; % adjust parameter
 n = N/space;
-
-% choose # of reynolds loops
-ct = 1;
 
 % array of rank approximations
 dim = zeros(1,n);
@@ -18,11 +19,14 @@ for i = 1:n
     dim(1,i) = space*i  ;
 end
 
+%% Initialize
+
+% choose # of reynolds loops
+ct = 1;
+
 % collection of errors for plotting
 DMDerrF_full = zeros(ct,n);
 ODerrF_full = zeros(ct,n);
-% DMDerr2_full = zeros(ct,n);
-% ODerr2_full = zeros(ct,n);
 
 % collection of computation time
 iter1 = 0;
@@ -30,22 +34,35 @@ timeOD = zeros(1,ct*n);
 timeDMD = zeros(1,ct*n);
 timespace = linspace(1,ct*n,ct*n);
 
+% initialize array of errors 
+DMDerrF = zeros(1,n);
+ODerrF = zeros(1,n);
+
+% For multiple Re loops
+iter1 = iter1 + 1;
+
+%% Load Data (double check 'dim' above)
+
 % KS (Jeff's code)
-interval = 400; % adjust parameter
-re = 13.2; % adjust parameter
-% load data (double check 'dim' above)
-fileload = strcat('kuramoto_1db_snap_L',int2str(100*re),'_',int2str(interval));
+interval = 400; % adjust parameter, time interval length
+re = 402.35; % adjust parameter, bifurcation parameter
+
+if sens == 1
+    fileload = strcat('kuramoto_1db_snap_L',int2str(100*re),'_',int2str(interval),'_sens1');
+else
+    fileload = strcat('kuramoto_1db_snap_L',int2str(100*re),'_',int2str(interval));
+end
 load(fileload)
-z = w_save;
+Z = w_save;
 t = time;
 
 % Simulate full model
 figure
 % 4000 case has 5x larger steps
 if interval == 4000
-    mesh(x,t(1:end),z')
+    mesh(x,t(1:end),Z')
 else
-    mesh(x,t(1:end-1),z')
+    mesh(x,t(1:end-1),Z')
 end
 % view([.7 -.8 .6])
 view([0 0 1])
@@ -54,46 +71,67 @@ xlabel('x'); ylabel('t'); zlabel('z')
 title('Finite Element Solution')
 xlim([0 1]) 
 ylim([0 interval])
-% zlim([-20 20])
 
-% split the data
-s = 3;
-t_spliti = zeros(1,s);
-iter_spliti = 1;
-ni = 10;
-t_split = zeros(1,1);
-while size(t_split,2) < 3
-    tlist = zeros(1,1);
-    for i = 1:ni
-        [n_split,t_split,iter_split] = run_nsplit(z,z,s,t_spliti,iter_spliti);
-        for k = 1:size(t_split,2)
-            tlist(end+1) = t_split(k);
-        end
-    end
+%% Split the Data
+if split == 1
+    s = 10; % adjust parameter, number of initial splits
+    t_spliti = zeros(1,s);
+    iter_spliti = 1;
+    ni = 10;
     t_split = zeros(1,1);
-    init = true;
-    for i = 1:size(tlist,2)
-        if nnz(tlist==tlist(i)) > (0.6*ni)
-            if init
-                init = false;
-                t_split(1) = tlist(i);
-            else
-                t_split(end+1) = tlist(i);
+    while size(t_split,2) < s
+        tlist = zeros(1,1);
+        for i = 1:ni
+            [~,t_split,iter_split] = run_nsplit(Z,Z,s,t_spliti,iter_spliti);
+            for k = 1:size(t_split,2)
+                tlist(end+1) = t_split(k);
             end
         end
+        t_split = zeros(1,1);
+        init = true;
+        for i = 1:size(tlist,2)
+            if nnz(tlist==tlist(i)) > (0.6*ni)
+                if init
+                    init = false;
+                    t_split(1) = tlist(i);
+                else
+                    t_split(end+1) = tlist(i);
+                end
+            end
+        end
+        t_split = sort(t_split);
+        t_split = unique(t_split.','rows').';
+        n_split = size(t_split,2); 
     end
-    t_split = sort(t_split);
-    t_split = unique(t_split.','rows').';
-    n_split = size(t_split,2); 
-end          
 
-% % split the data with DMD
-% r_dim  = dim(1,1);
-% s = 6;
-% t_split = zeros(1,s);
-% iter_split = 1;
-% [n_split,t_split,iter_split] = run_nsplitDMD(z,z,s,t_split,iter_split,r_dim,t);
+%     % shift split lines
+%     l1 = length(t_split)-1;
+%     
+%     for k=1:l1
+%         t_split(k) = t_split(k) + 150;
+%     end
 
+    % splits
+    p = ones(1,n_split+1);
+    for k = 1:n_split
+        p(1,k+1) = t_split(k);
+    end
+
+    % Simulate split k model
+    for k = 1:n_split
+        figure
+        mesh(x,t(p(k):p(k+1)),Z(:,p(k):p(k+1))')
+        % view([.7 -.8 .6])
+        view([0 0 1])
+        pause(0.001)
+        xlabel('x'); ylabel('t'); zlabel('z')
+        title(['Finite Element Solution, Split ', num2str(k)], 'Interpreter','latex')
+        xlim([0 1])
+        ylim([0 interval])
+    end
+end
+
+%% Future State Prediction (Incomplete)
 
 % % Extrapolating Data
 % interval2 = 4000; % adjust parameter
@@ -103,41 +141,12 @@ end
 % z2 = w_save;
 % t2 = time;
 
-% initialize array of errors 
-% PODerrF = zeros(1,n);
-DMDerrF = zeros(1,n);
-ODerrF = zeros(1,n);
-
-% For multiple Re loops
-iter1 = iter1 + 1;
-
-% % USE DMD MODES
-% Phases
-p = ones(1,n_split+1);
-for k = 1:n_split
-    p(1,k+1) = t_split(k);
-end
-
 % % for predicting t=4000
 % % p1_2 = p1/5;
 % p1_2 = p1/5;
 % z2_p2 = z2(:,p1_2:length(z2));
 
-% Simulate phase k model
-for k = 1:n_split
-    figure
-    mesh(x,t(p(k):p(k+1)),z(:,p(k):p(k+1))')
-    % view([.7 -.8 .6])
-    view([0 0 1])
-    pause(0.001)
-    xlabel('x'); ylabel('t'); zlabel('z')
-    title(['Finite Element Solution, Phase ', num2str(k)], 'Interpreter','latex')
-    xlim([0 1])
-    ylim([0 interval])
-    % zlim([-20 20])
-end
-
-% % Simulate phase 2 model t=4000
+% % Simulate split 2 model t=4000
 % figure
 % mesh(x,t2(p1_2:end),z2_p2')
 % % view([.7 -.8 .6])
@@ -166,6 +175,7 @@ end
 % ylim([0 interval2])
 % % zlim([-20 20])
 
+%% Run DMD
 for rk = 1:n
     
       if split == 1
@@ -205,7 +215,7 @@ for rk = 1:n
                 err_LM{1,k},alphas_LM{1,k},...
                 realXdmd{1,k},errorDMD{1,k},realXod{1,k},errorOD{1,k},...
                 w{1,k},e{1,k},b{1,k} ] ...
-                = run_DMD_KS(z(:,p(k):p(k+1)),r_dim,dt,M,t(p(k):p(k+1)),interval);
+                = run_DMD_KS(Z(:,p(k):p(k+1)),r_dim,dt,M,t(p(k):p(k+1)),interval);
 
         end
         
@@ -229,24 +239,21 @@ for rk = 1:n
         tic
         % Mass matrix (Jeff's code)
         [M] = compute_mass_matrix(x,e_conn);
-        tM = toc;
 
-        % POD
-        [POD] = run_POD(z,r_dim,M);
-
-        % Use the POD modes to compute a DMD bases of dimension r_dim
-        [relerrDMD_r,relerr1_r,~,~,tOD,tDMD,niter_LM,err_LM,alphas_LM,realXdmd,errorDMD,realXod,errorOD,w,e,b] ...
-            = run_DMD_KS(z,r_dim,dt,M,t(1:end-1),interval);
-    
-        % Extrapolation
-        Xd10 = w*diag(b)*exp(e*t2);
-        relerr10_r = norm(Xd10-z2,'fro')/norm(z2,'fro');
+        % Compute a DMD bases of dimension r_dim
+        [relerrDMD_r,relerr1_r,~,~,tOD,tDMD,niter_LM,err_LM,alphas_LM,...
+            realXdmd,errorDMD,realXod,errorOD,w,e,b] ...
+            = run_DMD_KS(Z,r_dim,dt,M,t(1:end-1),interval);
         
       end
 
-    % Simulate DMD ROM
+    % Simulate DMD ROM and collect L2 error
     [errorL2_DMD,errorL2_OD] = sim_DMD_KS(realXdmd,errorDMD,realXod,errorOD,r_dim,interval,M);
     
+%     % Extrapolation
+%     Xd10 = w*diag(b)*exp(e*t2);
+%     relerr10_r = norm(Xd10-z2,'fro')/norm(z2,'fro');
+
 %     % Simulate Extrapolation
 %     realXd10 = real(Xd10);
 %     figure
@@ -298,9 +305,10 @@ for rk = 1:n
     
 end
 
+%% Plot Error and Time Results for Multiple Tests
+
 if n > 1
 
-    % PODerrF_full(iter1,:) = PODerrF;
     DMDerrF_full(iter1,:) = DMDerrF;
     ODerrF_full(iter1,:) = ODerrF;
 
