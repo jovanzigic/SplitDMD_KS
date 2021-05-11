@@ -2,8 +2,8 @@ clear, close all
 
 
 %% Turn Splitting On or Off
-split = 1; % adjust parameter (1 on, 0 off)
-sens = 1;
+split = 0; % adjust parameter (1 on, 0 off)
+sens = 0;
 
 %% Choose Rank of Approximation
 

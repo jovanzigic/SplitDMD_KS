@@ -44,7 +44,6 @@ A_r = U_r' * X2 * V_r / S_r; % low-rank dynamics
 Phi = X2 * V_r / S_r * W_r; % DMD modes
 
 
-
 % DMD spectra
 lambda = diag(D); % discrete-time eigenvalues
 omega = log(lambda)/dt; % continuous-time eigenvalues

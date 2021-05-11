@@ -31,8 +31,8 @@
 
   t_initial        = 0;        % time step information for heat equation
   t_step           = 0.02;
-  t_save           = 0.10;%change to 0.1 for 4k, 0.02 for 400;
-  t_final          = 4000;%120.0;    % 400
+  t_save           = 0.02; %change to 0.1 for 4k, 0.02 for 400;
+  t_final          = 400 ; %120.0;    % 400
 
   resid_tol        = 1e-8;     % Newton solver parameters
   step_tol         = 1e-8;
@@ -78,7 +78,7 @@
  
   %  Set Initial Conditions   (should do Galerkin projection)
   %-----------------------------------------------------------------------------
-  w_current  =      sin(4*pi*x)/sqrt(epsilon);% + 0.05*rand(size(x)); 
+  w_current  =      sin(4*pi*x)/sqrt(epsilon) + 0.05*rand(size(x)); 
   wp_current = 4*pi*cos(4*pi*x)/sqrt(epsilon); 
   
 %   w_current  =    400* sin(4*pi*x) + 0.05*rand(size(x)); 

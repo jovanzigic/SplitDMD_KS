@@ -1,7 +1,7 @@
 clear, close all
-for L = [13.20:0.01:13.20]
+for L = [402.35:0.01:402.35]
   kuramoto_1db(1/L^2)
-  solution_file = strcat('snapshotsx_at_L',int2str(100*L));
+  solution_file = strcat('snapshotsx_at_L',int2str(100*L),'_400_sens1');
   load kuramoto_1db_snap 
   save( solution_file, 'w_save', 'wp_save', 'epsilon' )
 end
